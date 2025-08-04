@@ -1,0 +1,4 @@
+gym==0.26.2            # For environment API (used in environment.py)
+numpy==1.24.4          # For numerical computations and observations
+networkx==2.8.8        # For building and managing the graph-based topology
+ray[rllib]==2.48.0     # For MAPPO/IPPO training (if using Ray RLlib)
