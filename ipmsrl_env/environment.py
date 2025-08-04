@@ -20,20 +20,21 @@ class IPMSRLEnv(gym.Env):
 
         # One action per node
         self.action_space = spaces.MultiDiscrete([len(ActionType)] * len(self.network.graph.nodes))
-        self.observation_space = spaces.Dict({
-            node.id: spaces.Dict({
-                'infected': spaces.Discrete(2),
-                'contained': spaces.Discrete(2),
-                'alert': spaces.Discrete(2)
-            }) for node in self.network.get_all_nodes()
-        })
+        self.observation_space = spaces.Box(
+            low=0,
+            high=1,
+            shape=(len(self.network.get_all_nodes()) * 3,),  # 3 features per node
+            dtype=np.float32
+        )
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
 
-    def reset(self):
         self.network = IPMSNetwork(self.config)
         self.attacker = Attacker(self.network, self.config)
         self.defender = Defender(self.network)
         self.timesteps = 0
-        return self.defender.observe()
+
+        return self._get_flat_obs(), {}
 
     def step(self, actions):
         rewards = 0
@@ -53,6 +54,15 @@ class IPMSRLEnv(gym.Env):
         rewards += self.config['reward_weights']['global'] * calculate_global_reward(self.network)
 
         done = self.timesteps >= self.max_timesteps or calculate_global_reward(self.network) != 0
-        obs = self.defender.observe()
+        obs = self._get_flat_obs()
 
-        return obs, rewards, done, {}
+        return obs, rewards, done, False, {}
+
+    def _get_flat_obs(self):
+        obs = []
+        for node in self.network.get_all_nodes():
+            obs.append(int(node.is_infected()))
+            obs.append(int(node.is_contained()))
+            obs.append(int(node.alert_triggered))
+            
+        return np.array(obs, dtype=np.float32)
