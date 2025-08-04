@@ -1,3 +1,0 @@
-from tests.test_environment import test_environment_step_verbose
-
-test_environment_step_verbose()
