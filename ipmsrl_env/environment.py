@@ -10,7 +10,11 @@ from .rewards import calculate_global_reward, calculate_state_reward, calculate_
 from .constants import ActionType
 
 class IPMSRLEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, env_config = None):
+
+        super().__init__()
+        self.config = get_default_config() if env_config is None else env_config
+        
         self.config = get_default_config()
         self.network = IPMSNetwork(self.config)
         self.attacker = Attacker(self.network, self.config)
@@ -64,5 +68,5 @@ class IPMSRLEnv(gym.Env):
             obs.append(int(node.is_infected()))
             obs.append(int(node.is_contained()))
             obs.append(int(node.alert_triggered))
-            
+
         return np.array(obs, dtype=np.float32)
