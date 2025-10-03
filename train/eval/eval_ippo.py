@@ -15,6 +15,10 @@ from ipmsrl_env.utils import log_node_states
 import torch
 from torch.distributions import Categorical
 
+import matplotlib.pyplot as plt
+import networkx as nx
+
+
 register_env("ipmsrl_env", lambda cfg: IPMSRLEnv(cfg))
 # Add this function
 def create_eval_algorithm(checkpoint_path):
@@ -55,8 +59,12 @@ def evaluate(checkpoint_path):
         output = module.forward_inference({"obs": obs_tensor})
         logits = output["action_dist_inputs"][0]  # remove batch dim: shape (20,)
 
+        num_nodes = len(env.network.get_all_nodes())
+        num_actions_per_node = env.action_space.nvec[0]
+        assert logits.shape[0] == num_nodes * num_actions_per_node, "Logits shape mismatch!"
+
         # Split logits for each categorical action (4 per node)
-        split_logits = torch.split(logits, 4)  # 4 logits per action dim
+        split_logits = torch.split(logits, num_actions_per_node)  # 4 logits per action dim
         action_dist = dist_class(list(split_logits))
 
         # Sample full action vector
@@ -68,12 +76,40 @@ def evaluate(checkpoint_path):
 
         print(f"Step {step}: reward={reward:.2f}, done={done}")
         state_log = log_node_states(env.network)
+        draw_network(state_log, env.config["edges"], step)
+
         for node_id, info in state_log.items():
             print(f"  {node_id}: {info}")
 
     print("\n✅ Evaluation complete.")
     print(f"🏁 Total reward: {total_reward:.2f}")
     print(f"📏 Steps: {step}")
+
+def draw_network(state_log, edges, step):
+    G = nx.Graph()
+    
+    for node_id, info in state_log.items():
+        G.add_node(node_id, state=info['state'])
+
+    for edge in edges:
+        G.add_edge(*edge)
+
+    # Set color based on state
+    color_map = {
+        "HEALTHY": "green",
+        "INFECTED": "red",
+        "CONTAINED": "orange",
+        "RECOVERED": "blue"
+    }
+
+    colors = [color_map[G.nodes[n]["state"]] for n in G.nodes]
+    
+    plt.figure(figsize=(6, 5))
+    pos = nx.spring_layout(G, seed=42)
+    nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1000, font_size=10, edge_color='gray')
+    plt.title(f"IPMSRL Environment - Step {step}")
+    plt.show()
+
 
 if __name__ == "__main__":
     evaluate(CHECKPOINT_PATH)
