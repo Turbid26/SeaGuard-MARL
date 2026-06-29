@@ -1,5 +1,6 @@
 from ipmsrl_env.config import get_default_config
 from ipmsrl_env.network import IPMSNetwork
+
 from ipmsrl_env.rewards import (
     calculate_global_reward,
     calculate_state_reward,

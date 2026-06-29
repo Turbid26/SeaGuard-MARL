@@ -7,6 +7,7 @@ import pprint
 
 def test_attacker_infection_spread():
     config = get_default_config()
+    
     config['infection_probability'] = 1.0  # Force infection for test
     config['alert_success_prob'] = 1.0     # Force alert triggering
 
